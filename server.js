@@ -17,6 +17,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/cta', require('./routes/cta'));
 app.use('/api/users', require('./routes/users'));
+// Route photo-cta supprimée car intégrée dans /api/cta
 
 // Route de test
 app.get('/', (req, res) => {
@@ -29,6 +30,8 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Erreur interne du serveur' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Serveur démarré sur le port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Serveur démarré sur le port ${PORT} et accessible sur toutes les interfaces`);
+  console.log(`URL locale: http://localhost:${PORT}`);
+  console.log(`URL réseau: http://192.168.100.32:${PORT}`);
 }); 

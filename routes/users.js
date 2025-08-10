@@ -6,10 +6,10 @@ const auth = require('../middleware/auth');
 const router = express.Router();
 
 // Route pour récupérer tous les utilisateurs (sans les mots de passe)
-router.get('/', auth, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const [users] = await pool.execute(
-      'SELECT id, name, email, created_at FROM user ORDER BY created_at DESC'
+      'SELECT id, name, email, created_at FROM users ORDER BY created_at DESC'
     );
 
     res.json(users);
@@ -26,7 +26,7 @@ router.get('/:id', auth, async (req, res) => {
     const { id } = req.params;
 
     const [users] = await pool.execute(
-      'SELECT id, name, email, created_at FROM user WHERE id = ?',
+      'SELECT id, name, email, created_at FROM users WHERE id = ?',
       [id]
     );
 
@@ -56,7 +56,7 @@ router.post('/', auth, async (req, res) => {
 
     // Vérifier si l'email existe déjà
     const [existingUsers] = await pool.execute(
-      'SELECT id FROM user WHERE email = ?',
+      'SELECT id FROM users WHERE email = ?',
       [email]
     );
 
@@ -72,13 +72,13 @@ router.post('/', auth, async (req, res) => {
 
     // Insérer le nouvel utilisateur
     const [result] = await pool.execute(
-      'INSERT INTO user (name, email, password) VALUES (?, ?, ?)',
+      'INSERT INTO users (name, email, password) VALUES (?, ?, ?)',
       [name, email, hashedPassword]
     );
 
     // Récupérer l'utilisateur créé (sans le mot de passe)
     const [newUser] = await pool.execute(
-      'SELECT id, name, email, created_at FROM user WHERE id = ?',
+      'SELECT id, name, email, created_at FROM users WHERE id = ?',
       [result.insertId]
     );
 
@@ -101,7 +101,7 @@ router.put('/:id', auth, async (req, res) => {
 
     // Vérifier si l'utilisateur existe
     const [existingUsers] = await pool.execute(
-      'SELECT id FROM user WHERE id = ?',
+      'SELECT id FROM users WHERE id = ?',
       [id]
     );
 
@@ -121,7 +121,7 @@ router.put('/:id', auth, async (req, res) => {
     if (email) {
       // Vérifier si l'email existe déjà pour un autre utilisateur
       const [emailCheck] = await pool.execute(
-        'SELECT id FROM user WHERE email = ? AND id != ?',
+        'SELECT id FROM users WHERE email = ? AND id != ?',
         [email, id]
       );
 
@@ -154,13 +154,13 @@ router.put('/:id', auth, async (req, res) => {
 
     // Mettre à jour l'utilisateur
     await pool.execute(
-      `UPDATE user SET ${updateFields.join(', ')} WHERE id = ?`,
+      `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`,
       updateValues
     );
 
     // Récupérer l'utilisateur mis à jour
     const [updatedUser] = await pool.execute(
-      'SELECT id, name, email, created_at FROM user WHERE id = ?',
+      'SELECT id, name, email, created_at FROM users WHERE id = ?',
       [id]
     );
 
@@ -182,7 +182,7 @@ router.delete('/:id', auth, async (req, res) => {
 
     // Vérifier si l'utilisateur existe
     const [existingUsers] = await pool.execute(
-      'SELECT id FROM user WHERE id = ?',
+      'SELECT id FROM users WHERE id = ?',
       [id]
     );
 
@@ -192,7 +192,7 @@ router.delete('/:id', auth, async (req, res) => {
 
     // Vérifier si l'utilisateur a des contrôles techniques associés
     const [ctaCount] = await pool.execute(
-      'SELECT COUNT(*) as count FROM photo_cta WHERE technicien_name = (SELECT name FROM user WHERE id = ?)',
+      'SELECT COUNT(*) as count FROM photo_cta WHERE technicien_name = (SELECT name FROM users WHERE id = ?)',
       [id]
     );
 
@@ -204,7 +204,7 @@ router.delete('/:id', auth, async (req, res) => {
 
     // Supprimer l'utilisateur
     const [result] = await pool.execute(
-      'DELETE FROM user WHERE id = ?',
+      'DELETE FROM users WHERE id = ?',
       [id]
     );
 
@@ -226,7 +226,7 @@ router.get('/search/:query', auth, async (req, res) => {
     const { query } = req.params;
 
     const [users] = await pool.execute(
-      'SELECT id, name, email, created_at FROM user WHERE name LIKE ? OR email LIKE ? ORDER BY name ASC',
+      'SELECT id, name, email, created_at FROM users WHERE name LIKE ? OR email LIKE ? ORDER BY name ASC',
       [`%${query}%`, `%${query}%`]
     );
 
