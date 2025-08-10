@@ -19,7 +19,7 @@ router.post('/login', async (req, res) => {
 
     // Rechercher l'utilisateur par email
     const [users] = await pool.execute(
-      'SELECT * FROM user WHERE email = ?',
+      'SELECT * FROM users WHERE email = ?',
       [email]
     );
 
@@ -76,7 +76,7 @@ router.get('/verify', async (req, res) => {
     
     // Vérifier que l'utilisateur existe toujours
     const [users] = await pool.execute(
-      'SELECT id, name, email FROM user WHERE id = ?',
+      'SELECT id, name, email FROM users WHERE id = ?',
       [decoded.userId]
     );
 
