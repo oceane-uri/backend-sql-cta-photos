@@ -24,6 +24,11 @@ const createPhotoCTATable = async () => {
         type_vehicule ENUM('CTVL', 'CTPL', 'CTTAXI') NOT NULL DEFAULT 'CTVL',
         photo_base64 LONGTEXT NOT NULL,
         cta_id INT,
+        technicien_name VARCHAR(100) NOT NULL,
+        latitude DECIMAL(10, 8),
+        longitude DECIMAL(11, 8),
+        adresse VARCHAR(255),
+        timestamp_photo DATETIME,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_photo_cta_type_vehicule (type_vehicule),
@@ -52,6 +57,51 @@ const createPhotoCTATable = async () => {
       console.log('Colonne cta_id déjà présente');
     }
     
+    // Ajouter la colonne technicien_name si elle n'existe pas
+    try {
+      await pool.execute('ALTER TABLE photo_cta ADD COLUMN technicien_name VARCHAR(100) NOT NULL DEFAULT "Technicien"');
+      console.log('Colonne technicien_name ajoutée');
+    } catch (error) {
+      // La colonne existe déjà
+      console.log('Colonne technicien_name déjà présente');
+    }
+    
+    // Ajouter la colonne latitude si elle n'existe pas
+    try {
+      await pool.execute('ALTER TABLE photo_cta ADD COLUMN latitude DECIMAL(10, 8)');
+      console.log('Colonne latitude ajoutée');
+    } catch (error) {
+      // La colonne existe déjà
+      console.log('Colonne latitude déjà présente');
+    }
+    
+    // Ajouter la colonne longitude si elle n'existe pas
+    try {
+      await pool.execute('ALTER TABLE photo_cta ADD COLUMN longitude DECIMAL(11, 8)');
+      console.log('Colonne longitude ajoutée');
+    } catch (error) {
+      // La colonne existe déjà
+      console.log('Colonne longitude déjà présente');
+    }
+    
+    // Ajouter la colonne adresse si elle n'existe pas
+    try {
+      await pool.execute('ALTER TABLE photo_cta ADD COLUMN adresse VARCHAR(255)');
+      console.log('Colonne adresse ajoutée');
+    } catch (error) {
+      // La colonne existe déjà
+      console.log('Colonne adresse déjà présente');
+    }
+    
+    // Ajouter la colonne timestamp_photo si elle n'existe pas
+    try {
+      await pool.execute('ALTER TABLE photo_cta ADD COLUMN timestamp_photo DATETIME');
+      console.log('Colonne timestamp_photo ajoutée');
+    } catch (error) {
+      // La colonne existe déjà
+      console.log('Colonne timestamp_photo déjà présente');
+    }
+    
   } catch (error) {
     console.error('Erreur lors de la création/mise à jour de la table photo_cta:', error);
   }
@@ -69,6 +119,48 @@ const calculateValidityDate = (vehicleType, visitDate) => {
 // Initialiser la table au démarrage
 createPhotoCTATable();
 
+// Route temporaire pour créer un CTA de test
+router.post('/create-test-cta', async (req, res) => {
+  try {
+    // Créer la table cta si elle n'existe pas
+    const createCTATableQuery = `
+      CREATE TABLE IF NOT EXISTS cta (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        immatriculation VARCHAR(20) NOT NULL,
+        date_visite DATE NOT NULL,
+        centre VARCHAR(100) NOT NULL,
+        technicien_name VARCHAR(100) DEFAULT 'Technicien Test',
+        date_validite DATE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    
+    await pool.execute(createCTATableQuery);
+    
+    // Insérer un CTA de test
+    const insertQuery = `
+      INSERT INTO cta (immatriculation, date_visite, centre, date_validite) 
+      VALUES (?, CURDATE(), ?, DATE_ADD(CURDATE(), INTERVAL 12 MONTH))
+    `;
+    
+    const [result] = await pool.execute(insertQuery, ['TEST-123-AB', 'EKPE']);
+    
+    res.json({
+      success: true,
+      message: 'CTA de test créé',
+      ctaId: result.insertId
+    });
+    
+  } catch (error) {
+    console.error('Erreur lors de la création du CTA de test:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la création du CTA de test',
+      error: error.message
+    });
+  }
+});
+
 // Route pour ajouter un nouveau contrôle technique avec photo
 router.post('/photo', auth, async (req, res) => {
   try {
@@ -78,8 +170,15 @@ router.post('/photo', auth, async (req, res) => {
       centre, 
       type_vehicule = 'CTVL',
       photo_base64,
-      cta_id
+      cta_id,
+      latitude,
+      longitude,
+      adresse,
+      timestamp_photo
     } = req.body;
+
+    // Récupérer le nom du technicien depuis le token JWT
+    const technicien_name = req.user ? req.user.name || req.user.username || 'Technicien' : 'Technicien';
 
     // Validation des données
     if (!immatriculation || !date_visite || !centre || !photo_base64) {
@@ -103,9 +202,9 @@ router.post('/photo', auth, async (req, res) => {
     // Insérer les données
     const [result] = await pool.execute(
       `INSERT INTO photo_cta 
-       (immatriculation, date_visite, date_validite, centre, type_vehicule, photo_base64, cta_id) 
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [immatriculation, date_visite, date_validite, centre, type_vehicule, photo_base64, cta_id]
+       (immatriculation, date_visite, date_validite, centre, type_vehicule, photo_base64, cta_id, technicien_name, latitude, longitude, adresse, timestamp_photo) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [immatriculation, date_visite, date_validite, centre, type_vehicule, photo_base64, cta_id, technicien_name, latitude, longitude, adresse, timestamp_photo]
     );
 
     res.status(201).json({
@@ -118,7 +217,11 @@ router.post('/photo', auth, async (req, res) => {
         date_validite,
         centre,
         type_vehicule,
-        cta_id
+        cta_id,
+        latitude,
+        longitude,
+        adresse,
+        timestamp_photo
       }
     });
 
