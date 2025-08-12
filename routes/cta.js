@@ -186,7 +186,8 @@ router.post('/photo', auth, async (req, res) => {
       longitude,
       adresse,
       timestamp_photo,
-      fiche_controle_pdf
+      fiche_controle_pdf,
+      statut_validation = 'en_attente'
     } = req.body;
 
     // Récupérer le nom du technicien depuis le token JWT
@@ -222,9 +223,9 @@ router.post('/photo', auth, async (req, res) => {
     // Insérer les données
     const [result] = await pool.execute(
       `INSERT INTO photo_cta 
-       (immatriculation, date_visite, date_validite, centre, type_vehicule, photo_base64, cta_id, technicien_name, latitude, longitude, adresse, timestamp_photo, fiche_controle_pdf) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [immatriculation, date_visite, date_validite, centre, type_vehicule, photo_base64, cta_id, technicien_name, latitudeValue, longitudeValue, adresseValue, timestamp_photo, ficheControlePdfValue]
+       (immatriculation, date_visite, date_validite, centre, type_vehicule, photo_base64, cta_id, technicien_name, latitude, longitude, adresse, timestamp_photo, fiche_controle_pdf, statut_validation) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [immatriculation, date_visite, date_validite, centre, type_vehicule, photo_base64, cta_id, technicien_name, latitudeValue, longitudeValue, adresseValue, timestamp_photo, ficheControlePdfValue, statut_validation]
     );
 
     res.status(201).json({

@@ -41,7 +41,8 @@ router.post('/login', async (req, res) => {
       { 
         userId: user.id, 
         email: user.email, 
-        name: user.name 
+        name: user.name,
+        role: user.role
       },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
@@ -53,7 +54,8 @@ router.post('/login', async (req, res) => {
       user: {
         id: user.id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        role: user.role
       }
     });
 
@@ -86,7 +88,12 @@ router.get('/verify', async (req, res) => {
 
     res.json({
       valid: true,
-      user: users[0]
+      user: {
+        id: users[0].id,
+        name: users[0].name,
+        email: users[0].email,
+        role: users[0].role
+      }
     });
 
   } catch (error) {

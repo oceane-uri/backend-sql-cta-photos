@@ -32,6 +32,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/cta', require('./routes/cta'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/supervisor', require('./routes/supervisor'));
 // Route photo-cta supprimée car intégrée dans /api/cta
 
 // Route de test
