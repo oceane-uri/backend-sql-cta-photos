@@ -29,6 +29,7 @@ const createPhotoCTATable = async () => {
         longitude DECIMAL(11, 8),
         adresse VARCHAR(255),
         timestamp_photo DATETIME,
+        fiche_controle_pdf LONGTEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_photo_cta_type_vehicule (type_vehicule),
@@ -102,6 +103,15 @@ const createPhotoCTATable = async () => {
       console.log('Colonne timestamp_photo déjà présente');
     }
     
+    // Ajouter la colonne fiche_controle_pdf si elle n'existe pas
+    try {
+      await pool.execute('ALTER TABLE photo_cta ADD COLUMN fiche_controle_pdf LONGTEXT');
+      console.log('Colonne fiche_controle_pdf ajoutée');
+    } catch (error) {
+      // La colonne existe déjà
+      console.log('Colonne fiche_controle_pdf déjà présente');
+    }
+    
   } catch (error) {
     console.error('Erreur lors de la création/mise à jour de la table photo_cta:', error);
   }
@@ -164,6 +174,7 @@ router.post('/create-test-cta', async (req, res) => {
 // Route pour ajouter un nouveau contrôle technique avec photo
 router.post('/photo', auth, async (req, res) => {
   try {
+          console.log('📸 Données reçues');
     const { 
       immatriculation, 
       date_visite, 
@@ -174,7 +185,8 @@ router.post('/photo', auth, async (req, res) => {
       latitude,
       longitude,
       adresse,
-      timestamp_photo
+      timestamp_photo,
+      fiche_controle_pdf
     } = req.body;
 
     // Récupérer le nom du technicien depuis le token JWT
@@ -199,12 +211,20 @@ router.post('/photo', auth, async (req, res) => {
     // Calcul automatique de la date de validité
     const date_validite = calculateValidityDate(type_vehicule, date_visite);
 
+    // Convertir undefined en null pour MySQL
+    const latitudeValue = latitude || null;
+    const longitudeValue = longitude || null;
+    const adresseValue = adresse || null;
+    const ficheControlePdfValue = fiche_controle_pdf || null;
+
+    console.log('🔧 Valeurs converties pour MySQL');
+
     // Insérer les données
     const [result] = await pool.execute(
       `INSERT INTO photo_cta 
-       (immatriculation, date_visite, date_validite, centre, type_vehicule, photo_base64, cta_id, technicien_name, latitude, longitude, adresse, timestamp_photo) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [immatriculation, date_visite, date_validite, centre, type_vehicule, photo_base64, cta_id, technicien_name, latitude, longitude, adresse, timestamp_photo]
+       (immatriculation, date_visite, date_validite, centre, type_vehicule, photo_base64, cta_id, technicien_name, latitude, longitude, adresse, timestamp_photo, fiche_controle_pdf) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [immatriculation, date_visite, date_validite, centre, type_vehicule, photo_base64, cta_id, technicien_name, latitudeValue, longitudeValue, adresseValue, timestamp_photo, ficheControlePdfValue]
     );
 
     res.status(201).json({
@@ -221,7 +241,8 @@ router.post('/photo', auth, async (req, res) => {
         latitude,
         longitude,
         adresse,
-        timestamp_photo
+        timestamp_photo,
+        fiche_controle_pdf
       }
     });
 
@@ -239,7 +260,7 @@ router.post('/photo', auth, async (req, res) => {
 router.get('/photos', auth, async (req, res) => {
   try {
     const [rows] = await pool.execute(
-      `SELECT id, immatriculation, date_visite, date_validite, centre, type_vehicule, cta_id, created_at 
+      `SELECT id, immatriculation, date_visite, date_validite, centre, type_vehicule, cta_id, created_at, fiche_controle_pdf 
        FROM photo_cta 
        ORDER BY created_at DESC`
     );
@@ -297,7 +318,7 @@ router.get('/photos/cta/:ctaId', auth, async (req, res) => {
     const { ctaId } = req.params;
 
     const [rows] = await pool.execute(
-      `SELECT id, immatriculation, date_visite, date_validite, centre, type_vehicule, cta_id, created_at 
+      `SELECT id, immatriculation, date_visite, date_validite, centre, type_vehicule, cta_id, created_at, fiche_controle_pdf 
        FROM photo_cta 
        WHERE cta_id = ? 
        ORDER BY created_at DESC`,
@@ -325,7 +346,7 @@ router.get('/search/:immatriculation', auth, async (req, res) => {
     const { immatriculation } = req.params;
 
     const [rows] = await pool.execute(
-      `SELECT id, immatriculation, date_visite, date_validite, centre, type_vehicule, cta_id, created_at 
+      `SELECT id, immatriculation, date_visite, date_validite, centre, type_vehicule, cta_id, created_at, fiche_controle_pdf 
        FROM photo_cta 
        WHERE immatriculation LIKE ? 
        ORDER BY created_at DESC`,
@@ -357,7 +378,8 @@ router.put('/photo/:id', auth, async (req, res) => {
       centre, 
       type_vehicule,
       photo_base64,
-      cta_id
+      cta_id,
+      fiche_controle_pdf
     } = req.body;
 
     // Vérifier si l'enregistrement existe
@@ -419,6 +441,10 @@ router.put('/photo/:id', auth, async (req, res) => {
     if (cta_id !== undefined) {
       updateFields.push('cta_id = ?');
       updateValues.push(cta_id);
+    }
+    if (fiche_controle_pdf !== undefined) {
+      updateFields.push('fiche_controle_pdf = ?');
+      updateValues.push(fiche_controle_pdf);
     }
 
     if (updateFields.length === 0) {
